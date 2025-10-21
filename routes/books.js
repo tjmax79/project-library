@@ -1,5 +1,6 @@
 const express = require('express')
 const router = express.Router()
+const Book =require('../models/book');
 
 
 
@@ -37,12 +38,15 @@ const books = [
 ];
 
 
-router.get("/", (req, res) => {
-  res.send("Welcome to homepage");
-});
+// router.get("/", (req, res) => {
+//   res.send("Welcome to homepage");
+// });
 
-router.get("/", (req, res) => {
+router.get("/", async(req, res) => {
+  // const books =await Book.find()// to list all books
+const books = await Book.find({author:/\bbond\b/i})
   res.json(books);
+  
 });
 
 router.get("/:id", (req, res) => {
@@ -56,7 +60,7 @@ router.get("/:id", (req, res) => {
   res.json(book);
 });
 
-router.post("/", (req, res) => {
+router.post("/",async (req, res) => {
   const book = req.body;
 
   if (!book.title) {
@@ -71,50 +75,69 @@ router.post("/", (req, res) => {
     return res.status(400).json({ message: "Pages is required!" });
   }
 
-  const newBook = {
-    id: books[books.length - 1].id + 1,
-    title: book.title,
-    author: book.author,
-    pages: book.pages,
-  };
+  //Manually adding recoreds to Database
+//   const newBook = {
+//     id: books[books.length - 1].id + 1,
+//     title: book.title,
+//     author: book.author,
+//     pages: book.pages,
+//   };
 
-  books.push(newBook);
-  res.status(201).json(newBook);
-});
+//   books.push(newBook);
 
-router.put("/:id", (req, res) => {
-  const bookId = parseInt(req.params.id);
+// Using model
 
-  const { title, author, pages } = req.body;
+    const newBook =  new Book({
+        title:book.title,
+        author:book.author,
+        pages:book.pages
+    })
+   const storeData =  await newBook.save()
+    res.status(201).json(storeData);
+  })
 
-  const bookindex = books.findIndex((t) => t.id === bookId);
 
-  if (bookindex === -1) {
-    return res.status(404).json({ message: "Book not found" });
-  }
 
-  if (title) {
-    books[bookindex].title = title;
-  }
+router.put("/:id",async (req, res) => {
 
-  if (author) {
-    books[bookindex].author = author;
-  }
+  const id = req.params.id
+  const{author}= req.body
 
-  if (pages) {
-    books[bookindex].pages = pages;
-  }
-  res.json(books[bookindex]);
+  // const { title, author, pages } = req.body; manual operation
+ const updatedBook = await Book.findByIdAndUpdate(
+ id,{$set:{title:'You are so good'}},{new:true, runValidator:true}
+ )
+  const bookindex = books.findIndex((t) => t.id === id);
+
+  // remove it. its for local operation
+//   if (bookindex === -1) {
+//     return res.status(404).json({ message: "Book not found" });
+//   }
+
+//   if (title) {
+//     books[bookindex].title = title;
+//   }
+
+//   if (author) {
+//     books[bookindex].author = author;
+//   }
+
+//   if (pages) {
+//     books[bookindex].pages = pages;
+//   }
+  res.json(updatedBook);
 });
 
 router.delete("/:id", (req, res) => {
-  const bookId = parseInt(req.params.id);
-  const bookindex = books.findIndex((t) => t.id === bookId);
+  const id = (req.params.id);
+  const bookindex = books.findIndex((t) => t.id === id);
 
-  if (bookindex === -1) {
-    return res.send("Book not found");
-  }
-  books.splice(bookindex, 1);
-  res.send(`Book deleted successfully`);
+  // not relevant
+  // if (bookindex === -1) {
+  //   return res.send("Book not found");
+  // }
+  // books.splice(bookindex, 1);
+  Book.deleteOne({_id:id})
+  res.send({message:"Book deleted successfully"});
 });
-module.exports= router
+module.exports = router
